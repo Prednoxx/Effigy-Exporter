@@ -1,13 +1,15 @@
-"""Read KRAK DCX payloads with the Oodle 9 DLL supplied by Nightreign."""
+"""Read KRAK DCX payloads with the DLL from the selected game."""
 import ctypes as c
 import struct
 
 
-class Oodle9:
-    def __init__(self, path):
+class Oodle:
+    def __init__(self, path, version):
         dll = c.WinDLL(str(path))
+        self.version = version
         self.buffer_size = dll.OodleLZ_GetDecodeBufferSize
-        self.buffer_size.argtypes = (c.c_int, c.c_ssize_t, c.c_int)
+        self.buffer_size.argtypes = ((c.c_ssize_t, c.c_int) if version == 6 else
+                                     (c.c_int, c.c_ssize_t, c.c_int))
         self.buffer_size.restype = c.c_ssize_t
         self.decompress = dll.OodleLZ_Decompress
         self.decompress.argtypes = (
@@ -27,7 +29,7 @@ class Oodle9:
             raise ValueError("Invalid KRAK payload size")
 
         # Oodle 9 takes a compressor selector before the output length.
-        capacity = self.buffer_size(-1, size, 1)
+        capacity = self.buffer_size(size, 1) if self.version == 6 else self.buffer_size(-1, size, 1)
         if capacity < size or capacity > size + (1 << 20):
             raise ValueError("Invalid Oodle output buffer size")
         output = c.create_string_buffer(capacity)

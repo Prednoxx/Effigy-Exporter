@@ -14,10 +14,12 @@ class ArchiveProfile:
     reference: str
     archives: tuple
     wide_hash: bool = False
+    oodle_version: int = 0
 
 
 DS3 = ArchiveProfile("DarkSouls3", ("Data1", "Data2", "Data3", "Data4", "Data5", "DLC1", "DLC2"))
-NIGHTREIGN = ArchiveProfile("EldenRingNightreign", ("Data0", "Data1", "Data2", "Data3"), True)
+ELDEN_RING = ArchiveProfile("EldenRing", ("Data0", "Data1", "Data2", "Data3", "DLC"), True, 6)
+NIGHTREIGN = ArchiveProfile("EldenRingNightreign", ("Data0", "Data1", "Data2", "Data3"), True, 9)
 
 
 def path_hash(path, wide=False):
@@ -107,6 +109,7 @@ def relevant(name):
     return bool(re.fullmatch(
         r"(?:chr/c\d{4}(?:_[\w]+)?\.(?:chrbnd|anibnd|texbnd|tpf)"
         r"|parts/wp_[a-z]_\d+(?:_[\w]+)?\.(?:partsbnd|anibnd|texbnd|tpf)"
+        r"|parts/common_body\.tpf"
         r"|msg/engus/item(?:_dlc\d+)?\.msgbnd"
         r"|mtd/allmaterialbnd\.mtdbnd|material/allmaterial(?:_dlc\d+)?\.matbinbnd)(?:\.dcx)?", name))
 
@@ -115,6 +118,11 @@ class GameFiles:
     def __init__(self, root, reference, profile=DS3, progress=lambda _: None):
         self.root = Path(root).resolve()
         self.oodle = None
+        if profile.oodle_version:
+            dll = self.root / f"oo2core_{profile.oodle_version}_win64.dll"
+            if dll.is_file():
+                from .oodle import Oodle
+                self.oodle = Oodle(dll, profile.oodle_version)
         self.files = {}
         pairs = [name for name in profile.archives
                  if (self.root / f"{name}.bhd").is_file() and (self.root / f"{name}.bdt").is_file()]
@@ -153,4 +161,7 @@ class GameFiles:
     def read(self, name):
         entry = self.files[name]
         raw = entry.read_bytes() if isinstance(entry, Path) else entry.read()
-        return self.oodle.unwrap(raw) if self.oodle else raw
+        return self.unwrap(raw)
+
+    def unwrap(self, data):
+        return self.oodle.unwrap(data) if self.oodle else data

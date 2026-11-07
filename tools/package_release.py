@@ -9,9 +9,15 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
+ADDON = ROOT / "blender_addon/souls_asset_studio"
 sys.path.insert(0, str(ROOT))
 
 from souls_studio import __version__
+
+
+def addon_filename():
+    version = tomllib.loads((ADDON / "blender_manifest.toml").read_text(encoding="utf-8"))["version"]
+    return f"EffigyExporter-Blender-{version}.zip"
 
 
 def copy_licenses(stage):
@@ -57,10 +63,8 @@ def package(stage, releases):
     for name in ("README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
         shutil.copy2(ROOT / name, stage)
     copy_licenses(stage)
-    addon = ROOT / "blender_addon/souls_asset_studio"
-    version = tomllib.loads((addon / "blender_manifest.toml").read_text(encoding="utf-8"))["version"]
-    addon_zip = releases / f"EffigyExporter-Blender-{version}.zip"
-    zip_files(addon_zip, addon)
+    addon_zip = releases / addon_filename()
+    zip_files(addon_zip, ADDON)
     shutil.copy2(addon_zip, stage)
     portable = releases / f"EffigyExporter-{__version__}-Windows-x64.zip"
     zip_files(portable, stage, Path("EffigyExporter"))
@@ -68,7 +72,7 @@ def package(stage, releases):
 
 
 def checksums(releases):
-    assets = sorted((*releases.glob("EffigyExporter-*.zip"), *releases.glob("EffigyExporter-*-Setup.exe")))
+    assets = sorted((*releases.glob(f"EffigyExporter-{__version__}-*"), releases / addon_filename()))
     rows = []
     for asset in assets:
         with asset.open("rb") as stream:

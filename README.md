@@ -1,6 +1,6 @@
 # Effigy Exporter
 
-Browse, preview, and export models and animations from Dark Souls III and Elden Ring Nightreign.
+Browse, preview, and export models and animations from Dark Souls III, Elden Ring, and Elden Ring Nightreign.
 
 ## Features
 
@@ -48,12 +48,13 @@ Model and clip names come from the browser. **Export Animation** writes the sele
 
 ## Coverage
 
-- DS3 and Nightreign support Steam detection, BHD5/BDT extraction, available FLVER LODs, HKX playback, and GLB, glTF, and CAST export. Search accepts names and model IDs.
-- DS3 and Nightreign show Attack, Projectile, or Throw Attack beside a clip ID when the game's TimeAct event table supports that label. Other clips retain their IDs.
+- All three games support Steam detection, BHD5/BDT extraction, available FLVER LODs, HKX playback, and GLB, glTF, and CAST export. Search accepts names and model IDs.
+- Clips show Attack, Projectile, or Throw Attack beside the ID when the game's TimeAct event table supports that label.
 - Material export covers base color, normals, gloss-derived roughness, DS3 reflectance, Nightreign metalness, cutouts, and emission. GLB and glTF approximate the game materials with portable PBR. The viewport displays base color. Phase changes and cloth simulation are outside this build.
 - Animation coverage varies by clip. The app reports unsupported additive clips and transforms that cannot be represented reliably in GLB.
 - Nightreign reads the installed base-game archives, using the game's Oodle 9 DLL and SoulsFormats for its FLVER models. Nightreign weapon labels and DLC coverage are pending.
-- Dark Souls, Dark Souls II, and Elden Ring are reserved for later adapters.
+- Elden Ring reads its base and Shadow of the Erdtree archives, with weapon names from the installed English game text.
+- Dark Souls and Dark Souls II are reserved for later adapters.
 
 ## Build
 
@@ -75,4 +76,5 @@ The Tk/OpenGL viewport and export writers are adapted from Apex Asset Studio, co
 - The DS3 name table adapts the Souls Modding Wiki contributors’ [character list](https://www.soulsmodding.com/doku.php?id=ds3-refmat:character-list) and [parts list](https://www.soulsmodding.com/doku.php?id=ds3-refmat:part-list) under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The table retains installed model IDs, normalizes labels, and adds entries checked against installed FLVERs and [Paramdex equipment labels](https://github.com/soulsmods/Paramdex/blob/master/DS3/Names/EquipParamWeapon.txt). English game text takes precedence for weapons.
 - [Soulstruct for Blender](https://github.com/Grimrukh/soulstruct-blender) and [Elden Ring Character Exporter](https://github.com/gvm1229/EldenRing-Exporter) provide reference workflows for Blender actions and rig binding.
 - [DS3 renderer analysis](https://www.fig14.com/ds3/assets.html) and [Soulstruct’s Elden Ring material builder](https://github.com/Grimrukh/soulstruct-blender/blob/main/io_soulstruct/soulstruct/blender/flver/material/shaders/eldenring/node_tree_builder.py) document the source material channels.
+- [Smithbox Elden Ring character aliases](https://github.com/vawser/Smithbox/blob/main/src/Smithbox.Data/Assets/Aliases/ER/Characters.json) supply Elden Ring character labels under the [MIT license](licenses/Smithbox-MIT.txt).
 - [FLVER Editor 2](https://github.com/asasasasasbc/FLVER_Editor) and [WitchyBND](https://github.com/ividyon/WitchyBND) provide format references for later games. ERAnimate's repository was unavailable during inspection.

@@ -161,6 +161,15 @@ def textures_from(data, name, textures):
                 textures[key] = (pixels, raw)
 
 
+@lru_cache(maxsize=2)
+def shared_textures(catalog):
+    textures = {}
+    for path in catalog.shared_texture_packages:
+        if path in catalog.files.files:
+            textures_from(catalog.files.read(path), path, textures)
+    return textures
+
+
 def texture_role(semantic):
     name = semantic.lower()
     if name == "g_bumpmaptexture":
@@ -225,19 +234,20 @@ def load_model(catalog, asset, progress=lambda _: None, read_flver=FLVER.from_by
                 stem = sampler["texture"].lower()
                 if not role or not stem or role in seen or stem.startswith("systex_dummy"):
                     continue
-                if stem not in textures:
+                source = textures.get(stem) or shared_textures(catalog).get(stem)
+                if source is None:
                     warnings.append(f"Missing texture: {stem}")
                     continue
                 opaque = role == "albedo" and not alpha
                 key = (stem, role, opaque)
                 try:
                     if key not in encoded:
-                        encoded[key] = decode_texture(textures[stem][1], role, opaque, workflow)
+                        encoded[key] = decode_texture(source[1], role, opaque, workflow)
                 except (OSError, ValueError, NotImplementedError) as error:
                     warnings.append(f"{stem}: {error}")
                     continue
                 image, roughness = encoded[key]
-                binding = dict(role=role, image=image, key=key, dds=textures[stem][1],
+                binding = dict(role=role, image=image, key=key, dds=source[1],
                                uv=sampler["uv"], scale=sampler["scale"])
                 spec["textures"].append(binding)
                 if roughness is not None:

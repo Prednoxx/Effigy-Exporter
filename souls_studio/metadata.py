@@ -1,4 +1,4 @@
-"""Read DS3 display masks and localized weapon names from game data."""
+"""Read display masks and localized weapon names from game data."""
 from collections import defaultdict
 from pathlib import PureWindowsPath
 import struct
@@ -10,6 +10,7 @@ from soulstruct.containers import Binder
 
 DS3_REGULATION_KEY = b"ds3#jn/8_7(rsY9pg55GFN7VFL#+3n/)"
 DS3_WEAPON_NAME_ENTRIES = {11, 211, 251}
+ER_REGULATION_KEY = bytes.fromhex("99bffc366a6bc8c6f5827d093602d676c42892a01c207fb024d3af4e493fef99")
 
 
 def param_rows(data, minimum_row_size):
@@ -26,15 +27,15 @@ def param_rows(data, minimum_row_size):
         yield id, memoryview(data)[offset:offset + minimum_row_size]
 
 
-def decrypt_regulation(data, key):
-    if data.startswith((b"BND4", b"DCX\0")):
-        return Binder.from_bytes(data)
-    if len(data) < 32:
-        raise ValueError("Truncated regulation")
-    iv, payload = data[:16], data[16:]
-    decryptor = Cipher(algorithms.AES(key), modes.CBC(iv)).decryptor()
-    payload += bytes(-len(payload) % 16)
-    return Binder.from_bytes(decryptor.update(payload) + decryptor.finalize())
+def decrypt_regulation(data, key, unwrap=None):
+    if not data.startswith((b"BND4", b"DCX\0")):
+        if len(data) < 32:
+            raise ValueError("Truncated regulation")
+        iv, payload = data[:16], data[16:]
+        decryptor = Cipher(algorithms.AES(key), modes.CBC(iv)).decryptor()
+        payload += bytes(-len(payload) % 16)
+        data = decryptor.update(payload) + decryptor.finalize()
+    return Binder.from_bytes(unwrap(data) if unwrap else data)
 
 
 def ds3_metadata(files):
@@ -54,21 +55,35 @@ def ds3_metadata(files):
             flags = int.from_bytes(data, "little")
             masks.setdefault(model, frozenset(f"{i:02}" for i in range(32) if flags & (1 << i)))
 
+    return masks, weapon_labels(files, tables.get("equipparamweapon.param"), 0xB8, DS3_WEAPON_NAME_ENTRIES)
+
+
+def weapon_labels(files, equip, offset, fmg_ids):
+    if equip is None:
+        return {}
     names = {}
     for msg in sorted(name for name in files.files if name.startswith("msg/engus/")):
         for entry in Binder.from_bytes(files.read(msg)).entries:
-            if entry.entry_id in DS3_WEAPON_NAME_ENTRIES:
+            if entry.entry_id in fmg_ids:
                 names.update(FMG.from_bytes(entry.get_uncompressed_data()).entries)
 
     weapons = defaultdict(list)
-    equip = tables.get("equipparamweapon.param")
-    if equip:
-        rows = param_rows(equip.get_uncompressed_data(), 0xBA)
-        for id, row in sorted(rows, key=lambda entry: entry[0]):
-            name = names.get(id, "").strip()
-            if not name or name == "?":
-                continue
-            model = f"wp_a_{struct.unpack_from('<H', row, 0xB8)[0]:04}"
-            if name not in weapons[model]:
-                weapons[model].append(name)
-    return masks, {model: tuple(labels) for model, labels in weapons.items()}
+    rows = param_rows(equip.get_uncompressed_data(), offset + 2)
+    for id, row in sorted(rows, key=lambda entry: entry[0]):
+        name = names.get(id, "").strip()
+        if not name or name.casefold() in {"?", "[error]"}:
+            continue
+        model = f"wp_a_{struct.unpack_from('<H', row, offset)[0]:04}"
+        if name not in weapons[model]:
+            weapons[model].append(name)
+    return {model: tuple(labels) for model, labels in weapons.items()}
+
+
+def elden_ring_metadata(files):
+    path = files.root / "regulation.bin"
+    if not path.is_file():
+        return {}, {}
+    regulation = decrypt_regulation(path.read_bytes(), ER_REGULATION_KEY, files.unwrap)
+    equip = next((entry for entry in regulation.entries
+                  if PureWindowsPath(entry.path).name.lower() == "equipparamweapon.param"), None)
+    return {}, weapon_labels(files, equip, 0xBC, {11, 310, 410})

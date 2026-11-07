@@ -1,4 +1,4 @@
-"""Adapt SoulsFormats' Nightreign FLVER data to the common model pipeline."""
+"""Adapt SoulsFormats' newer FLVER data to the common model pipeline."""
 import json
 from pathlib import Path
 import subprocess
@@ -26,7 +26,7 @@ def mesh_stream(mesh):
     return SimpleNamespace(array=stream)
 
 
-def read_nightreign_flver(raw, decoder):
+def read_flver(raw, decoder):
     with TemporaryDirectory(prefix="souls-flver-") as directory:
         source = Path(directory) / "model.flver"
         output = Path(directory) / "model.json"
@@ -37,7 +37,7 @@ def read_nightreign_flver(raw, decoder):
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
         if process.returncode or not output.is_file():
-            raise ValueError(process.stderr.strip() or "Nightreign FLVER decode failed")
+            raise ValueError(process.stderr.strip() or "FLVER decode failed")
         model = json.loads(output.read_bytes())
 
     materials = []

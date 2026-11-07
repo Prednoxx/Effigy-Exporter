@@ -35,7 +35,7 @@ def checked_destination(path, catalog):
     path = Path(path).resolve()
     if path.is_relative_to(catalog.files.root) or any(
             (parent / executable).is_file() for parent in (path, *path.parents)
-            for executable in ("DarkSoulsIII.exe", "nightreign.exe")):
+            for executable in ("DarkSoulsIII.exe", "eldenring.exe", "nightreign.exe")):
         raise ValueError("Choose a location outside the game folder.")
     return path
 

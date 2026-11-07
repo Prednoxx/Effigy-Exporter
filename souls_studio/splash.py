@@ -1,18 +1,22 @@
+from time import perf_counter
 import tkinter as tk
 
 from PIL import Image, ImageTk
 
-from . import __version__
+from . import APP_NAME, __version__
 from .paths import RESOURCES
 
 
 class StartupSplash(tk.Toplevel):
     WIDTH = 624
     HEIGHT = 351
+    MINIMUM_SECONDS = 1.1
 
     def __init__(self, owner):
         super().__init__(owner)
         self.overrideredirect(True)
+        self.title(f"{APP_NAME} Startup")
+        self.attributes("-topmost", True)
         self.resizable(False, False)
         self.protocol("WM_DELETE_WINDOW", owner.close)
         left = (self.winfo_screenwidth() - self.WIDTH) // 2
@@ -36,6 +40,10 @@ class StartupSplash(tk.Toplevel):
         self.fraction = 0.08
         self.set_progress("Starting", self.fraction)
         self.update_idletasks()
+        self.shown_at = perf_counter()
+
+    def remaining_ms(self):
+        return max(0, round((self.shown_at + self.MINIMUM_SECONDS - perf_counter()) * 1000))
 
     def set_progress(self, text, fraction=None):
         self.fraction = min(0.9, self.fraction + 0.09) if fraction is None else fraction

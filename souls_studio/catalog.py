@@ -4,11 +4,11 @@ import json
 from pathlib import Path
 import re
 
-from .archive import DS3, NIGHTREIGN, GameFiles
+from .archive import DS3, ELDEN_RING, NIGHTREIGN, GameFiles
 
 
-GAMES = {"Dark Souls III": "ds3", "Elden Ring Nightreign": "nightreign",
-         "Dark Souls": "ds1", "Dark Souls II / Scholar": "ds2", "Elden Ring": "er"}
+GAMES = {"Dark Souls III": "ds3", "Elden Ring": "er", "Elden Ring Nightreign": "nightreign",
+         "Dark Souls": "ds1", "Dark Souls II / Scholar": "ds2"}
 
 # Model identifiers cross-checked against the DS3 Character Model IDs reference.
 BOSSES = {
@@ -77,6 +77,7 @@ class SoulsCatalog:
     bosses = BOSSES
     characters = {}
     weapons = WEAPON_NAMES
+    shared_texture_packages = ()
     executable = "DarkSoulsIII.exe"
     app_id = 374320
 
@@ -139,7 +140,37 @@ class Ds3Catalog(SoulsCatalog):
             return {}, {}
 
 
-class NightreignCatalog(SoulsCatalog):
+class ModernCatalog(SoulsCatalog):
+    def __init__(self, root, reference, progress):
+        self.model_decoder = reference.parent / "decoder/SekiroMotionDecoder.exe"
+        super().__init__(root, reference, progress)
+
+    def load(self, asset, progress):
+        from .model import load_model
+        from .modern_model import read_flver
+        return load_model(self, asset, progress, read_flver=partial(read_flver, decoder=self.model_decoder))
+
+
+class EldenRingCatalog(ModernCatalog):
+    profile = ELDEN_RING
+    _names = json.loads(Path(__file__).with_name("eldenring_names.json").read_text(encoding="utf-8"))
+    characters = _names["characters"]
+    bosses = dict(zip(_names["bosses"], map(characters.__getitem__, _names["bosses"])))
+    weapons = {}
+    shared_texture_packages = ("parts/common_body.tpf", "parts/common_body.tpf.dcx")
+    executable = "eldenring.exe"
+    app_id = 1245620
+
+    def metadata(self):
+        from .metadata import elden_ring_metadata
+        try:
+            return elden_ring_metadata(self.files)
+        except (OSError, ValueError) as error:
+            self.warnings.append(f"Game metadata: {error}")
+            return {}, {}
+
+
+class NightreignCatalog(ModernCatalog):
     profile = NIGHTREIGN
     characters = json.loads(Path(__file__).with_name("nightreign_names.json").read_text(encoding="utf-8"))
     bosses = {
@@ -154,19 +185,4 @@ class NightreignCatalog(SoulsCatalog):
     executable = "nightreign.exe"
     app_id = 2622380
 
-    def __init__(self, root, reference, progress):
-        super().__init__(root, reference, progress)
-        from .oodle import Oodle9
-        self.model_decoder = reference.parent / "decoder/SekiroMotionDecoder.exe"
-        dll = self.files.root / "oo2core_9_win64.dll"
-        if dll.is_file():
-            self.files.oodle = Oodle9(dll)
-
-    def load(self, asset, progress):
-        from .model import load_model
-        from .nightreign_model import read_nightreign_flver
-        read_flver = partial(read_nightreign_flver, decoder=self.model_decoder)
-        return load_model(self, asset, progress, read_flver=read_flver)
-
-
-ADAPTERS = {"ds3": Ds3Catalog, "nightreign": NightreignCatalog}
+ADAPTERS = {"ds3": Ds3Catalog, "er": EldenRingCatalog, "nightreign": NightreignCatalog}

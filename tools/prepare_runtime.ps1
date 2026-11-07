@@ -37,7 +37,7 @@ $lookup = Join-Path $runtime "uxm/UXM"
 New-Item -ItemType Directory -Force -Path (Join-Path $lookup "res") | Out-Null
 $keyText = [IO.File]::ReadAllText((Join-Path $uxm "UXM/ArchiveKeys.cs"))
 $lookupKeys = [ordered]@{}
-foreach ($game in "DarkSouls3", "EldenRingNightreign") {
+foreach ($game in "DarkSouls3", "EldenRing", "EldenRingNightreign") {
     $start = $keyText.IndexOf($game + "Keys")
     if ($start -lt 0) { throw "Archive lookup missing for $game." }
     $end = $keyText.IndexOf("};", $start)
@@ -52,7 +52,7 @@ foreach ($game in "DarkSouls3", "EldenRingNightreign") {
     $lookupKeys[$game] = $keys
 }
 [IO.File]::WriteAllText((Join-Path $lookup "keys.json"), ($lookupKeys | ConvertTo-Json -Depth 4))
-foreach ($name in "DarkSouls3Dictionary.txt", "EldenRingNightreignDictionary.txt") {
+foreach ($name in "DarkSouls3Dictionary.txt", "EldenRingDictionary.txt", "EldenRingNightreignDictionary.txt") {
     Copy-Item -LiteralPath (Join-Path $uxm "UXM/res/$name") -Destination (Join-Path $lookup "res") -Force
 }
 

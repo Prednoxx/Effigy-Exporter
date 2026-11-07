@@ -105,10 +105,13 @@ class Studio(Workflow, tk.Tk):
             return
         if self.splash:
             self.splash.set_progress("Locating game", 0.23)
-        self.scan()
+        self.scan(startup=True)
 
-    def finish_startup(self):
+    def finish_startup(self, linger=False):
         if self.splash:
+            if linger and (remaining := self.splash.remaining_ms()):
+                self.splash.after(remaining, self.finish_startup)
+                return
             self.splash.destroy()
             self.splash = None
             self.deiconify()
@@ -378,7 +381,7 @@ class Studio(Workflow, tk.Tk):
     def change_game(self, _):
         self.scan()
 
-    def scan(self, path=None):
+    def scan(self, path=None, startup=False):
         self.catalog = None
         self.filter_assets()
         self.clear_model()
@@ -390,9 +393,18 @@ class Studio(Workflow, tk.Tk):
             return
         game = self.game.get()
         path = path or self.scan_paths.get(game) or adapter.detect()
+        if startup and path is None:
+            for candidate in SUPPORTED_GAMES:
+                if candidate == game:
+                    continue
+                fallback = ADAPTERS[GAMES[candidate]]
+                if detected := self.scan_paths.get(candidate) or fallback.detect():
+                    game, adapter, path = candidate, fallback, detected
+                    self.game.set(game)
+                    break
         if path is None:
             self.status.set("Game folder unavailable")
-            self.finish_startup()
+            self.finish_startup(linger=True)
             return
 
         def ready(catalog):
@@ -405,7 +417,7 @@ class Studio(Workflow, tk.Tk):
             logging.info("Indexed %s: %d assets", game, len(catalog.assets))
             if self.splash:
                 self.splash.set_progress("Opening library", 1.0)
-                self.after_idle(self.finish_startup)
+                self.finish_startup(linger=True)
 
         self.run_job("Indexing game", lambda progress: adapter(path, REFERENCE, progress), ready)
 
