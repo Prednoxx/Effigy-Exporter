@@ -1,0 +1,12 @@
+schema_version = "1.0.0"
+id = "souls_asset_studio"
+version = "0.6.0"
+name = "Effigy Exporter"
+tagline = "Import rigged Souls models and animation clips"
+maintainer = "Prednoxx"
+type = "add-on"
+blender_version_min = "4.5.0"
+license = ["SPDX:GPL-3.0-or-later"]
+
+[permissions]
+files = "Read exported assets and studio HDRIs, save turntable renders"

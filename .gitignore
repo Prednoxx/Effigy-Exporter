@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.glb
+/runtime/
+/build/
+/dist/
+/Releases/
+/.venv/
+*.blend
+*.log
+*.gltf
+*.cast
